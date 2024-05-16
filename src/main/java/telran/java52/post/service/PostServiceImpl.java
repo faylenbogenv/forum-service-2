@@ -1,16 +1,13 @@
 package telran.java52.post.service;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
+
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import telran.java52.post.dao.PostRepository;
 import telran.java52.post.dto.DatePeriodDto;
 import telran.java52.post.dto.NewCommentDto;
@@ -23,7 +20,7 @@ import telran.java52.post.model.Post;
 @Service
 @RequiredArgsConstructor
 public class PostServiceImpl implements PostService {
-	
+
 	final PostRepository postRepository;
 	final ModelMapper modelMapper;
 
@@ -51,14 +48,14 @@ public class PostServiceImpl implements PostService {
 	@Override
 	public PostDto updatePost(String id, NewPostDto newPostDto) {
 		Post post = postRepository.findById(id).orElseThrow(PostNotFoundExeption::new);
-		if(newPostDto.getTitle() != null) {
+		if (newPostDto.getTitle() != null) {
 			post.setTitle(newPostDto.getTitle());
 		}
-		if(newPostDto.getContent() != null) {
+		if (newPostDto.getContent() != null) {
 			post.setContent(newPostDto.getContent());
 		}
 		Set<String> tags = newPostDto.getTags();
-		if(tags != null) {
+		if (tags != null) {
 			tags.forEach(post::addTag);
 		}
 		post = postRepository.save(post);
@@ -85,24 +82,22 @@ public class PostServiceImpl implements PostService {
 	@Override
 	public Iterable<PostDto> findPostsByAuthor(String author) {
 		return postRepository.findByAuthorIgnoreCase(author)
-							 .map(post -> modelMapper.map(post, PostDto.class))
-							 .collect(Collectors.toList());
+				.map(p -> modelMapper.map(p, PostDto.class))
+				.toList();
 	}
 
 	@Override
 	public Iterable<PostDto> findPostsByTags(List<String> tags) {
 		return postRepository.findByTagsInIgnoreCase(tags)
-							 .map(post -> modelMapper.map(post, PostDto.class))
-							 .collect(Collectors.toList());
+				.map(p -> modelMapper.map(p, PostDto.class))
+				.toList();
 	}
 
 	@Override
 	public Iterable<PostDto> findPostsByPeriod(DatePeriodDto datePeriodDto) {
-		LocalDateTime dateFrom = datePeriodDto.getDateFrom().atStartOfDay();
-		LocalDateTime dateTo = datePeriodDto.getDateTo().atTime(23, 59, 59);
-		return postRepository.findByDateCreatedBetween(dateFrom, dateTo)
-							 .map(post -> modelMapper.map(post, PostDto.class))
-							 .collect(Collectors.toList());
+		return postRepository.findByDateCreatedBetween(datePeriodDto.getDateFrom(), datePeriodDto.getDateTo())
+				.map(p -> modelMapper.map(p, PostDto.class))
+				.toList();
 	}
 
 }
