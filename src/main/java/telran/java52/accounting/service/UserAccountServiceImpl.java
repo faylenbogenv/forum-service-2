@@ -1,5 +1,6 @@
 package telran.java52.accounting.service;
 
+import org.mindrot.jbcrypt.BCrypt;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
@@ -9,8 +10,9 @@ import telran.java52.accounting.dto.RolesDto;
 import telran.java52.accounting.dto.UserDto;
 import telran.java52.accounting.dto.UserEditDto;
 import telran.java52.accounting.dto.UserRegisterDto;
-import telran.java52.accounting.exeption.UserAlreadyExist;
-import telran.java52.accounting.exeption.UserNotFoundExeption;
+import telran.java52.accounting.dto.exeptions.IncorrectRoleExeption;
+import telran.java52.accounting.dto.exeptions.UserExistsExeption;
+import telran.java52.accounting.dto.exeptions.UserNotFoundExeption;
 import telran.java52.accounting.model.UserAccount;
 
 @Service
@@ -22,11 +24,13 @@ public class UserAccountServiceImpl implements UserAccountService {
 
 	@Override
 	public UserDto register(UserRegisterDto userRegisterDto) {
-		UserAccount userAccount = modelMapper.map(userRegisterDto, UserAccount.class);
-		if(userAccountRepository.findById(userRegisterDto.getLogin()).isPresent()) {
-			throw new UserAlreadyExist();
+		if (userAccountRepository.existsById(userRegisterDto.getLogin())) {
+			throw new UserExistsExeption();
 		}
-		userAccount = userAccountRepository.save(userAccount);
+		UserAccount userAccount = modelMapper.map(userRegisterDto, UserAccount.class);
+		String password = BCrypt.hashpw(userRegisterDto.getPassword(), BCrypt.gensalt());
+		userAccount.setPassword(password);
+		userAccountRepository.save(userAccount);
 		return modelMapper.map(userAccount, UserDto.class);
 	}
 
@@ -59,8 +63,9 @@ public class UserAccountServiceImpl implements UserAccountService {
 	@Override
 	public void changePassword(String login, String newPassword) {
 		UserAccount userAccount = userAccountRepository.findById(login).orElseThrow(UserNotFoundExeption::new);
+		String password = BCrypt.hashpw(newPassword, BCrypt.gensalt());
 		if(newPassword != null) {
-			userAccount.setPassword(newPassword);
+			userAccount.setPassword(password);
 		}
 		userAccount = userAccountRepository.save(userAccount);
 
@@ -69,12 +74,20 @@ public class UserAccountServiceImpl implements UserAccountService {
 	@Override
 	public RolesDto changeRolesList(String login, String role, boolean isAddRole) {
 		UserAccount userAccount = userAccountRepository.findById(login).orElseThrow(UserNotFoundExeption::new);
-		if (isAddRole) {
-			userAccount.addRole(role);
-		} else {
-			userAccount.removeRole(role);
+		boolean res;
+		try {
+			if (isAddRole) {
+				res = userAccount.addRole(role);
+			} else {
+				res = userAccount.removeRole(role);
+			}
+		} catch (Exception e) {
+			throw new IncorrectRoleExeption();
 		}
-		userAccount = userAccountRepository.save(userAccount);
+		if (res) {
+			userAccount = userAccountRepository.save(userAccount);
+		}
+		
 		return modelMapper.map(userAccount, RolesDto.class);
 	}
 

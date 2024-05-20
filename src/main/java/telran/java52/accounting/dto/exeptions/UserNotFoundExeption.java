@@ -1,4 +1,4 @@
-package telran.java52.accounting.exeption;
+package telran.java52.accounting.dto.exeptions;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
