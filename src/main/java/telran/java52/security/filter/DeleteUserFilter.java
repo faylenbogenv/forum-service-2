@@ -1,3 +1,4 @@
+
 package telran.java52.security.filter;
 
 import java.io.IOException;
@@ -17,14 +18,14 @@ import lombok.RequiredArgsConstructor;
 import telran.java52.accounting.dao.UserAccountRepository;
 import telran.java52.accounting.model.Role;
 import telran.java52.accounting.model.UserAccount;
+import telran.java52.security.model.User;
 
 @Component
-@RequiredArgsConstructor
+
 @Order(40)
 public class DeleteUserFilter implements Filter {
 	
-	final UserAccountRepository userAccountRepository;
-	
+		
 	@Override
 	public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain)
 			throws IOException, ServletException {
@@ -32,11 +33,10 @@ public class DeleteUserFilter implements Filter {
 		HttpServletRequest request = (HttpServletRequest) req;
 		HttpServletResponse response = (HttpServletResponse) resp;
 		if (checkEndpoint(request.getMethod(), request.getServletPath())) {
-			String principal = request.getUserPrincipal().getName();
-            UserAccount userAccount = userAccountRepository.findById(principal).get();
+			User principal = (User) request.getUserPrincipal();
 			String[] arr = request.getServletPath().split("/");
 			String owner = arr[arr.length - 1];
-			if (!(userAccount.getRoles().contains(Role.ADMINISTRATOR) || principal.equalsIgnoreCase(owner))) {
+			if (!(principal.getRoles().contains(Role.ADMINISTRATOR.toString()) || principal.getName().equalsIgnoreCase(owner))) {
 				response.sendError(403, "Permission denied");
 				return;
 			}
