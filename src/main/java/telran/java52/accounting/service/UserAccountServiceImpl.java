@@ -1,9 +1,9 @@
 package telran.java52.accounting.service;
 
-import org.mindrot.jbcrypt.BCrypt;
 import org.modelmapper.ModelMapper;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
 import lombok.RequiredArgsConstructor;
 import telran.java52.accounting.dao.UserAccountRepository;
 import telran.java52.accounting.dto.RolesDto;
@@ -13,14 +13,16 @@ import telran.java52.accounting.dto.UserRegisterDto;
 import telran.java52.accounting.dto.exeptions.IncorrectRoleExeption;
 import telran.java52.accounting.dto.exeptions.UserExistsExeption;
 import telran.java52.accounting.dto.exeptions.UserNotFoundExeption;
+import telran.java52.accounting.model.Role;
 import telran.java52.accounting.model.UserAccount;
 
 @Service
 @RequiredArgsConstructor
-public class UserAccountServiceImpl implements UserAccountService {
+public class UserAccountServiceImpl implements UserAccountService, CommandLineRunner {
 	
 	final UserAccountRepository userAccountRepository;
 	final ModelMapper modelMapper;
+	final PasswordEncoder passwordEncoder;
 
 	@Override
 	public UserDto register(UserRegisterDto userRegisterDto) {
@@ -28,7 +30,8 @@ public class UserAccountServiceImpl implements UserAccountService {
 			throw new UserExistsExeption();
 		}
 		UserAccount userAccount = modelMapper.map(userRegisterDto, UserAccount.class);
-		String password = BCrypt.hashpw(userRegisterDto.getPassword(), BCrypt.gensalt());
+//		String password = BCrypt.hashpw(userRegisterDto.getPassword(), BCrypt.gensalt());
+		String password = passwordEncoder.encode(userRegisterDto.getPassword());
 		userAccount.setPassword(password);
 		userAccountRepository.save(userAccount);
 		return modelMapper.map(userAccount, UserDto.class);
@@ -63,7 +66,8 @@ public class UserAccountServiceImpl implements UserAccountService {
 	@Override
 	public void changePassword(String login, String newPassword) {
 		UserAccount userAccount = userAccountRepository.findById(login).orElseThrow(UserNotFoundExeption::new);
-		String password = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+//		String password = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+		String password = passwordEncoder.encode(newPassword);
 		if(newPassword != null) {
 			userAccount.setPassword(password);
 		}
@@ -89,6 +93,19 @@ public class UserAccountServiceImpl implements UserAccountService {
 		}
 		
 		return modelMapper.map(userAccount, RolesDto.class);
+	}
+
+	@Override
+	public void run(String... args) throws Exception {
+		if(!userAccountRepository.existsById("admin")) {
+			String password = passwordEncoder.encode("admin");
+			UserAccount userAccount = new UserAccount("admin", "", "", password);
+			userAccount.addRole(Role.ADMINISTRATOR.name());
+			userAccount.addRole(Role.MODERATOR.name());
+			userAccountRepository.save(userAccount);
+			
+		}
+		
 	}
 
 }
